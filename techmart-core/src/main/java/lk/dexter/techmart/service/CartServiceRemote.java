@@ -12,11 +12,11 @@ import java.util.Map;
 public interface CartServiceRemote {
 
     void initializeCartForUser(User user);
-    void addItem(Product product, int quantity);
-    void removeItem(Integer productId);
+    void addItem(Integer productId, Integer warehouseId, int quantity);
+    void removeItem(Integer cartItemId);
     Map<Product, Integer> getCartItems();
-    List<CartItems> getCartItemsByUserId(String userId);
-    List<CartItems> getOrderItemsByCartId(Integer cartId);
+    Integer getCartIdFromUserId(String userId);
+    List<CartItems> getCartItemsByCartId(Integer cartId);
     double getTotal();
     void clearCart();
 

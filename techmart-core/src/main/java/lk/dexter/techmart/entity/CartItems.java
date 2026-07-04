@@ -19,8 +19,8 @@ public class CartItems implements Serializable {
     private Double subTotal;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_product_id")
-    private Product product;
+    @JoinColumn(name = "inventory_inventory_id")
+    private Inventory inventory;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_cart_id")
@@ -28,15 +28,43 @@ public class CartItems implements Serializable {
 
     public CartItems() {}
 
-    // Getters and Setters
-    public Integer getCartItemsId() { return cartItemsId; }
-    public void setCartItemsId(Integer cartItemsId) { this.cartItemsId = cartItemsId; }
-    public Integer getQty() { return qty; }
-    public void setQty(Integer qty) { this.qty = qty; }
-    public Double getSubTotal() { return subTotal; }
-    public void setSubTotal(Double subTotal) { this.subTotal = subTotal; }
-    public Product getProduct() { return product; }
-    public void setProduct(Product product) { this.product = product; }
-    public Cart getCart() { return cart; }
-    public void setCart(Cart cart) { this.cart = cart; }
+    public Integer getCartItemsId() {
+        return cartItemsId;
+    }
+
+    public void setCartItemsId(Integer cartItemsId) {
+        this.cartItemsId = cartItemsId;
+    }
+
+    public Integer getQty() {
+        return qty;
+    }
+
+    public void setQty(Integer qty) {
+        this.qty = qty;
+    }
+
+    public Double getSubTotal() {
+        return subTotal;
+    }
+
+    public void setSubTotal(Double subTotal) {
+        this.subTotal = subTotal;
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+    }
+
+    public Cart getCart() {
+        return cart;
+    }
+
+    public void setCart(Cart cart) {
+        this.cart = cart;
+    }
 }

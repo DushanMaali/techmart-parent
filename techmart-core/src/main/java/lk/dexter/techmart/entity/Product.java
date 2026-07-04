@@ -28,6 +28,9 @@ public class Product implements Serializable {
     @JoinColumn(name = "category_category_id")
     private Category category;
 
+    @Column(name = "status")
+    private Integer status;
+
     public Product() {}
 
     // Getters and Setters
@@ -43,4 +46,10 @@ public class Product implements Serializable {
     public void setProductImg(String productImg) { this.productImg = productImg; }
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
+    public Integer getStatus() {
+        return status;
+    }
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
 }

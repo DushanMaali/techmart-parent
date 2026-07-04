@@ -23,20 +23,48 @@ public class OrderItems implements Serializable {
     private Orders order;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_product_id")
-    private Product product;
+    @JoinColumn(name = "inventory_inventory_id")
+    private Inventory inventory;
 
     public OrderItems() {}
 
-    // Getters and Setters
-    public Integer getOrderItemId() { return orderItemId; }
-    public void setOrderItemId(Integer orderItemId) { this.orderItemId = orderItemId; }
-    public Integer getQty() { return qty; }
-    public void setQty(Integer qty) { this.qty = qty; }
-    public Double getSubtotal() { return subtotal; }
-    public void setSubtotal(Double subtotal) { this.subtotal = subtotal; }
-    public Orders getOrder() { return order; }
-    public void setOrder(Orders order) { this.order = order; }
-    public Product getProduct() { return product; }
-    public void setProduct(Product product) { this.product = product; }
+    public Integer getOrderItemId() {
+        return orderItemId;
+    }
+
+    public void setOrderItemId(Integer orderItemId) {
+        this.orderItemId = orderItemId;
+    }
+
+    public Integer getQty() {
+        return qty;
+    }
+
+    public void setQty(Integer qty) {
+        this.qty = qty;
+    }
+
+    public Double getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(Double subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public Orders getOrder() {
+        return order;
+    }
+
+    public void setOrder(Orders order) {
+        this.order = order;
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+    }
 }

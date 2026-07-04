@@ -3,16 +3,14 @@ package lk.dexter.techmart.sessionbean;
 import jakarta.ejb.Stateful;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lk.dexter.techmart.entity.Cart;
-import lk.dexter.techmart.entity.CartItems;
-import lk.dexter.techmart.entity.Product;
-import lk.dexter.techmart.entity.User;
+import lk.dexter.techmart.entity.*;
 import lk.dexter.techmart.service.CartServiceRemote;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Stateful(name = "CartService")
 public class CartService implements CartServiceRemote, Serializable {
@@ -20,113 +18,108 @@ public class CartService implements CartServiceRemote, Serializable {
     @PersistenceContext(unitName = "TechMart_Db_PU")
     private EntityManager em;
 
-    private User currentUser;
     private Cart activeCart;
-    private Map<Product, Integer> memoryCart = new HashMap<>();
+    private Map<Integer, CartItems> memoryCart = new HashMap<>();
 
     @Override
     public void initializeCartForUser(User user) {
-        this.currentUser = user;
+        Map<Integer, CartItems> guestItems = new HashMap<>(this.memoryCart);
         this.memoryCart.clear();
+        List<Cart> cartList = em.createQuery("SELECT c FROM Cart c WHERE c.user.id = :userId", Cart.class)
+                .setParameter("userId", user.getId())
+                .getResultList();
 
-        try {
-            List<Cart> cartList = em.createQuery("SELECT c FROM Cart c WHERE c.user.id = :userId", Cart.class)
-                    .setParameter("userId", user.getId())
+        if (!cartList.isEmpty()) {
+            this.activeCart = cartList.get(0);
+
+            List<CartItems> items = em.createQuery("SELECT ci FROM CartItems ci WHERE ci.cart.cartId = :cartId", CartItems.class)
+                    .setParameter("cartId", activeCart.getCartId())
                     .getResultList();
 
-            if (!cartList.isEmpty()) {
-                this.activeCart = cartList.get(0);
-
-                List<CartItems> items = em.createQuery(
-                                "SELECT ci FROM CartItems ci JOIN FETCH ci.product WHERE ci.cart.cartId = :cartId", CartItems.class)
-                        .setParameter("cartId", activeCart.getCartId())
-                        .getResultList();
-
-                for (CartItems item : items) {
-                    memoryCart.put(item.getProduct(), item.getQty());
-                }
-            } else {
-                activeCart = new Cart();
-                activeCart.setUser(user);
-                activeCart.setTotal(0.0);
-                em.persist(activeCart);
+            for (CartItems item : items) {
+                memoryCart.put(item.getInventory().getInventoryId(), item);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } else {
+            activeCart = new Cart();
+            activeCart.setUser(user);
+            activeCart.setTotal(0.0);
+            em.persist(activeCart);
         }
 
+        for (CartItems guestItem : guestItems.values()) {
+            addItem(guestItem.getInventory().getProduct().getProductId(),
+                    guestItem.getInventory().getWarehouse().getWarehouse_id(),
+                    guestItem.getQty());
+        }
     }
 
     @Override
-    public void addItem(Product product, int quantity) {
-        if (activeCart == null) return;
+    public void addItem(Integer productId, Integer warehouseId, int quantity) {
+        Inventory inventory = em.createQuery("SELECT i FROM Inventory i WHERE i.product.productId = :pId AND i.warehouse.warehouse_id = :wId", Inventory.class)
+                .setParameter("pId", productId)
+                .setParameter("wId", warehouseId)
+                .getSingleResult();
 
-        try {
-            List<CartItems> existingItems = em.createQuery(
-                            "SELECT ci FROM CartItems ci WHERE ci.cart.cartId = :cartId AND ci.product.productId = :prodId", CartItems.class)
-                    .setParameter("cartId", activeCart.getCartId())
-                    .setParameter("prodId", product.getProductId())
-                    .getResultList();
-
-            if (!existingItems.isEmpty()) {
-                CartItems item = existingItems.get(0);
+        if (activeCart != null) {
+            CartItems item = memoryCart.get(inventory.getInventoryId());
+            if (item != null) {
                 item.setQty(item.getQty() + quantity);
-                item.setSubTotal(product.getPrice() * item.getQty());
+                item.setSubTotal(item.getQty() * inventory.getProduct().getPrice());
                 em.merge(item);
-
-                memoryCart.put(product, item.getQty());
             } else {
+
                 CartItems newItem = new CartItems();
                 newItem.setCart(activeCart);
-                newItem.setProduct(product);
+                newItem.setInventory(inventory);
                 newItem.setQty(quantity);
-                newItem.setSubTotal(product.getPrice() * quantity);
+                newItem.setSubTotal(quantity * inventory.getProduct().getPrice());
                 em.persist(newItem);
-
-                memoryCart.put(product, quantity);
+                memoryCart.put(inventory.getInventoryId(), newItem);
             }
-
             updateCartTotal();
+        } else {
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            CartItems guestItem = new CartItems();
+            guestItem.setInventory(inventory);
+            guestItem.setQty(quantity);
+            memoryCart.put(inventory.getInventoryId(), guestItem);
         }
     }
 
     @Override
-    public void removeItem(Integer productId) {
-        if (activeCart == null) return;
-        try {
-            em.createQuery("DELETE FROM CartItems ci WHERE ci.cart.cartId = :cartId AND ci.product.productId = :prodId")
-                    .setParameter("cartId", activeCart.getCartId())
-                    .setParameter("prodId", productId)
-                    .executeUpdate();
-
-            memoryCart.keySet().removeIf(product -> product.getProductId().equals(productId));
-
+    public void removeItem(Integer inventoryId) {
+        CartItems item = memoryCart.get(inventoryId);
+        if (item != null) {
+            if (activeCart != null) {
+                em.remove(item);
+            }
+            memoryCart.remove(inventoryId);
             updateCartTotal();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
     @Override
     public Map<Product, Integer> getCartItems() {
-        return memoryCart;
+        return memoryCart.values().stream()
+                .collect(Collectors.toMap(
+                        item -> item.getInventory().getProduct(),
+                        CartItems::getQty,
+                        Integer::sum
+                ));
     }
 
     @Override
-    public List<CartItems> getCartItemsByUserId(String userId) {
-        return em.createQuery(
-                        "SELECT ci FROM CartItems ci JOIN FETCH ci.product WHERE ci.cart.user.id = :userId", CartItems.class)
-                .setParameter("userId", userId)
-                .getResultList();
+    public Integer getCartIdFromUserId(String userId) {
+        try {
+            return em.createQuery("SELECT c.cartId FROM Cart c WHERE c.user.id = :userId", Integer.class)
+                    .setParameter("userId", userId)
+                    .getSingleResult();
+        } catch (Exception e) { return null; }
     }
 
     @Override
-    public List<CartItems> getOrderItemsByCartId(Integer cartId) {
-        return em.createQuery(
-                        "SELECT ci FROM CartItems ci JOIN FETCH ci.product WHERE ci.cart.cartId = :cartId", CartItems.class)
+    public List<CartItems> getCartItemsByCartId(Integer cartId) {
+        return em.createQuery("SELECT ci FROM CartItems ci WHERE ci.cart.cartId = :cartId", CartItems.class)
                 .setParameter("cartId", cartId)
                 .getResultList();
     }
@@ -139,23 +132,15 @@ public class CartService implements CartServiceRemote, Serializable {
     @Override
     public void clearCart() {
         if (activeCart == null) return;
-        try {
-            em.createQuery("DELETE FROM CartItems ci WHERE ci.cart.cartId = :cartId")
-                    .setParameter("cartId", activeCart.getCartId())
-                    .executeUpdate();
-
-            memoryCart.clear();
-            activeCart.setTotal(0.0);
-            em.merge(activeCart);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        em.createQuery("DELETE FROM CartItems ci WHERE ci.cart.cartId = :cId")
+                .setParameter("cId", activeCart.getCartId()).executeUpdate();
+        memoryCart.clear();
+        activeCart.setTotal(0.0);
+        em.merge(activeCart);
     }
 
     private void updateCartTotal() {
-        double total = memoryCart.entrySet().stream()
-                .mapToDouble(entry -> entry.getKey().getPrice() * entry.getValue())
-                .sum();
+        double total = memoryCart.values().stream().mapToDouble(CartItems::getSubTotal).sum();
         activeCart.setTotal(total);
         em.merge(activeCart);
     }
