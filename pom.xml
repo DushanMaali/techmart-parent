@@ -6,12 +6,29 @@
 
     <groupId>lk.dexter.techmart</groupId>
     <artifactId>techmart-parent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>techmart-core</module>
+        <module>techmart-ejb</module>
+        <module>techmart-war</module>
+        <module>techmart-ear</module>
+    </modules>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>9.3.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
 </project>

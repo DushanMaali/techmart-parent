@@ -2,7 +2,7 @@ package lk.dexter.techmart.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "orders")
@@ -20,7 +20,7 @@ public class Orders implements Serializable {
     private Integer status;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private Date createdAt;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
@@ -35,8 +35,8 @@ public class Orders implements Serializable {
     public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 }

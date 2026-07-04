@@ -2,7 +2,7 @@ package lk.dexter.techmart.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "user")
@@ -28,7 +28,7 @@ public class User implements Serializable {
     private String mobile;
 
     @Column(name = "registered_at")
-    private LocalDateTime registeredAt;
+    private Date registeredAt;
 
     public User() {}
 
@@ -45,6 +45,6 @@ public class User implements Serializable {
     public void setPassword(String password) { this.password = password; }
     public String getMobile() { return mobile; }
     public void setMobile(String mobile) { this.mobile = mobile; }
-    public LocalDateTime getRegisteredAt() { return registeredAt; }
-    public void setRegisteredAt(LocalDateTime registeredAt) { this.registeredAt = registeredAt; }
+    public Date getRegisteredAt() { return registeredAt; }
+    public void setRegisteredAt(Date registeredAt) { this.registeredAt = registeredAt; }
 }

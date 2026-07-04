@@ -1,10 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <title>TechMart Home</title>
 </head>
 <body>
-$END$
+<header id="main-header" style="padding: 20px; border-bottom: 1px solid #ccc;">
+    <nav id="nav-container">Loading...</nav>
+</header>
+
+<div id="product-list">
+    <!-- Products load here -->
+</div>
+
+<script>
+    // Header Status Load
+    fetch('user-status')
+        .then(res => res.json())
+        .then(data => {
+            let nav = document.getElementById('nav-container');
+            if (data.status === 'logged') {
+                nav.innerHTML = `<span>Hello, ${data.name}</span>
+                                     <button onclick="location.href='cart.html'">Cart</button>
+                                     <button onclick="location.href='profile.html'">Profile</button>
+                                     <button onclick="location.href='logout'">Logout</button>`;
+            } else {
+                nav.innerHTML = `<button onclick="location.href='login.html'">Login</button>
+                                     <button onclick="location.href='cart.html'">Cart</button>`;
+            }
+        });
+
+    fetch('get-products')
+        .then(res => res.json())
+        .then(products => {
+            let container = document.getElementById('product-list');
+            products.forEach(p => {
+                container.innerHTML += `<div>
+                        <h3>${p.productName}</h3>
+                        <p>Price: LKR ${p.price}</p>
+                        <button onclick="addToCart(${p.productId})">Add to Cart</button>
+                    </div>`;
+            });
+        });
+
+    function addToCart(pid) {
+        fetch('add-to-cart?pid=' + pid)
+            .then(res => res.json())
+            .then(data => {
+                if(data.redirect) window.location.href = 'login.html';
+                else alert('Added to cart!');
+            });
+    }
+</script>
 </body>
 </html>
