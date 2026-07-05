@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Profile - TechMart</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <h2 class="mb-4">My Order History</h2>
+
+            <!-- Tabs Navs -->
+            <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" id="tab-1" data-bs-toggle="tab" data-bs-target="#notified" type="button">Notified</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-2" data-bs-toggle="tab" data-bs-target="#confirmed" type="button">Confirmed</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-3" data-bs-toggle="tab" data-bs-target="#packed" type="button">Packed</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-4" data-bs-toggle="tab" data-bs-target="#shipped" type="button">Shipped</button></li>
+                <li class="nav-item"><button class="nav-link" id="tab-5" data-bs-toggle="tab" data-bs-target="#cancelled" type="button">Cancelled</button></li>
+            </ul>
+
+            <!-- Tabs Content Containers -->
+            <div class="tab-content" id="orderTabsContent">
+                <div class="tab-pane fade show active" id="notified" role="tabpanel"></div>
+                <div class="tab-pane fade" id="confirmed" role="tabpanel"></div>
+                <div class="tab-pane fade" id="packed" role="tabpanel"></div>
+                <div class="tab-pane fade" id="shipped" role="tabpanel"></div>
+                <div class="tab-pane fade" id="cancelled" role="tabpanel"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", loadOrders);
+
+    function loadOrders() {
+        fetch('customer-orders')
+            .then(res => res.json())
+            .then(orders => {
+                const containers = {
+                    1: document.getElementById('notified'),
+                    2: document.getElementById('confirmed'),
+                    3: document.getElementById('packed'),
+                    4: document.getElementById('shipped'),
+                    5: document.getElementById('cancelled')
+                };
+
+
+                Object.values(containers).forEach(c => {
+                    if(c) c.innerHTML = '<p class="text-muted p-3">No orders found in this status.</p>';
+                });
+
+                if (!orders || orders.length === 0) return;
+
+                orders.forEach(order => {
+                    const container = containers[order.status];
+                    if (container) {
+                        if (container.querySelector('.text-muted')) container.innerHTML = '';
+
+                        let cancelBtn = (order.status === 1 || order.status === 2)
+                            ? `<button class="btn btn-sm btn-danger" onclick="cancelOrder(${order.orderId})">Cancel Order</button>`
+                            : '';
+
+                        let itemsHtml = '';
+                        if(order.items) {
+                            order.items.forEach(item => {
+                                itemsHtml += `
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+        <div class="d-flex align-items-center">
+            <img src="${item.productImg || 'https://via.placeholder.com/50'}" class="img-thumbnail me-3" style="width: 50px; height: 50px;">
+            <span>${item.productName || 'Unknown Product'}</span>
+        </div>
+        <span>LKR ${item.subtotal.toFixed(2)}</span>
+    </div>
+`;
+                            });
+                        }
+
+                        container.innerHTML += `
+                            <div class="card mb-3 shadow-sm border-0">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                    <span><strong>Order #${order.orderId}</strong></span>
+                                    ${cancelBtn}
+                                </div>
+                                <div class="card-body">
+                                    ${itemsHtml}
+                                    <div class="text-end pt-2"><strong>Total: LKR ${order.totalAmount.toFixed(2)}</strong></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }).catch(err => console.error("Error:", err));
+    }
+
+    function cancelOrder(orderId) {
+        if (confirm("Are you sure?")) {
+            fetch(`customer-orders?orderId=${orderId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) loadOrders();
+                });
+        }
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -17,5 +17,6 @@ public interface OrderServiceRemote {
     List<OrderItems> getOrderItemsByOrderId(Integer orderId);
     List<Orders> getAllOrders();
     boolean updateOrderStatus(Integer orderId, int newStatus);
-
+    List<Map<String, Object>> getSerializableOrderItemsByOrderId(Integer orderId);
+    Map<String, Object> getDashboardStats();
 }

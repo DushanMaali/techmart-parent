@@ -6,29 +6,18 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import lk.dexter.techmart.entity.User;
 
 import java.io.IOException;
 
-@WebServlet("/user-status")
-public class UserStatusServlet extends HttpServlet {
+@WebServlet("/logout")
+public class LogoutServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
         HttpSession session = req.getSession(false);
 
-        User user = null;
         if (session != null) {
-            user = (User) session.getAttribute("LOGGED_IN_USER");
+            session.invalidate();
         }
-
-        resp.setContentType("application/json");
-
-        if (user != null) {
-            resp.getWriter().write("{\"status\":\"logged\", \"name\":\"" + user.getFname() + "\"}");
-        } else {
-            resp.getWriter().write("{\"status\":\"guest\"}");
-        }
-
+        resp.sendRedirect("home.html");
     }
 }

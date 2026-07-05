@@ -44,7 +44,6 @@ public class RegisterServlet extends HttpServlet {
                 return;
             }
 
-            // 3. Mobile Validation (ඉලක්කම් 10ක් විය යුතුයි)
             if (mobile == null || !mobile.matches("^07[01245678]\\d{7}$")) {
                 out.println("<script>alert('Invalid Mobile number! Must be 10 digits.'); window.location='register.html';</script>");
                 return;

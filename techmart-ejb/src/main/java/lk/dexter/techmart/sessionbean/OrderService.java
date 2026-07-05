@@ -10,9 +10,7 @@ import lk.dexter.techmart.entity.*;
 import lk.dexter.techmart.service.InventoryManagerRemote;
 import lk.dexter.techmart.service.OrderServiceRemote;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Future;
 
 @Stateless(name = "OrderService")
@@ -98,6 +96,7 @@ public class OrderService implements OrderServiceRemote {
 
     @Override
     public List<Orders> getOrdersByUser(String userId) {
+        em.getEntityManagerFactory().getCache().evictAll();
         return em.createQuery("SELECT o FROM Orders o WHERE o.user.id = :userId ORDER BY o.createdAt DESC", Orders.class)
                 .setParameter("userId", userId).getResultList();
     }
@@ -127,6 +126,58 @@ public class OrderService implements OrderServiceRemote {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<Map<String, Object>> getSerializableOrderItemsByOrderId(Integer orderId) {
+        List<Map<String, Object>> serializedItems = new ArrayList<>();
+        try {
+            // 📦 DB එකෙන් Items ටික ගන්නවා
+            List<OrderItems> itemsList = em.createQuery(
+                            "SELECT oi FROM OrderItems oi JOIN FETCH oi.inventory WHERE oi.order.orderId = :orderId", OrderItems.class)
+                    .setParameter("orderId", orderId).getResultList();
+
+            for (OrderItems item : itemsList) {
+                Map<String, Object> itemMap = new HashMap<>();
+                itemMap.put("qty", item.getQty());
+                itemMap.put("subtotal", item.getSubtotal());
+
+                if (item.getInventory() != null && item.getInventory().getProduct() != null) {
+                    itemMap.put("productName", item.getInventory().getProduct().getProductName());
+                    itemMap.put("productImg", item.getInventory().getProduct().getProductImg());
+                } else {
+                    itemMap.put("productName", "Unknown Product");
+                    itemMap.put("productImg", "");
+                }
+                serializedItems.add(itemMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return serializedItems;
+    }
+
+    @Override
+    public Map<String, Object> getDashboardStats() {
+        Map<String, Object> stats = new HashMap<>();
+
+        // 1. Total Orders
+        Long totalOrders = em.createQuery("SELECT COUNT(o) FROM Orders o", Long.class).getSingleResult();
+        stats.put("totalOrders", totalOrders);
+
+        // 2. Best Selling Product
+        List<Object[]> bestProduct = em.createQuery(
+                        "SELECT oi.inventory.product.productName, SUM(oi.qty) FROM OrderItems oi GROUP BY oi.inventory.product.productName ORDER BY SUM(oi.qty) DESC", Object[].class)
+                .setMaxResults(1).getResultList();
+        stats.put("bestProduct", bestProduct.isEmpty() ? "N/A" : bestProduct.get(0)[0]);
+
+        // 3. Best Selling Warehouse
+        List<Object[]> bestWarehouse = em.createQuery(
+                        "SELECT oi.inventory.warehouse.name, SUM(oi.qty) FROM OrderItems oi GROUP BY oi.inventory.warehouse.name ORDER BY SUM(oi.qty) DESC", Object[].class)
+                .setMaxResults(1).getResultList();
+        stats.put("bestWarehouse", bestWarehouse.isEmpty() ? "N/A" : bestWarehouse.get(0)[0]);
+
+        return stats;
     }
 
 }

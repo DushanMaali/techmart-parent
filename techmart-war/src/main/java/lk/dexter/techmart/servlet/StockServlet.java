@@ -28,15 +28,18 @@ public class StockServlet extends HttpServlet {
         String pidParam = req.getParameter("pid");
         if (pidParam != null) {
             Integer productId = Integer.parseInt(pidParam);
-
-            // ProductService එකෙන් Warehouse සහ Qty Map එක ගන්නවා[cite: 1]
             Map<Warehouse, Integer> stockMap = productService.getAvailableStockByProduct(productId);
 
-            // Warehouse object එක කෙලින්ම JSON කලාම ගැටළු එන්න පුළුවන් නිසා, නම විතරක් Map එකකට දානවා
-            Map<String, Integer> cleanStockMap = new HashMap<>();
-            stockMap.forEach((warehouse, qty) -> cleanStockMap.put(warehouse.getName(), qty));
+            Map<String, Map<String, Object>> customStockMap = new HashMap<>();
 
-            String json = new Gson().toJson(cleanStockMap);
+            stockMap.forEach((warehouse, qty) -> {
+                Map<String, Object> details = new HashMap<>();
+                details.put("id", warehouse.getWarehouse_id());
+                details.put("qty", qty);
+                customStockMap.put(warehouse.getName(), details);
+            });
+
+            String json = new Gson().toJson(customStockMap);
             resp.getWriter().write(json);
         } else {
             resp.getWriter().write("{}");

@@ -1,5 +1,6 @@
 package lk.dexter.techmart.service;
 
+import jakarta.ejb.Local;
 import jakarta.ejb.Remote;
 import lk.dexter.techmart.entity.CartItems;
 import lk.dexter.techmart.entity.Product;
@@ -19,5 +20,7 @@ public interface CartServiceRemote {
     List<CartItems> getCartItemsByCartId(Integer cartId);
     double getTotal();
     void clearCart();
+    List<CartItems> getActiveMemoryCartItems();
+    List<Map<String, Object>> getSerializableCartItems();
 
 }

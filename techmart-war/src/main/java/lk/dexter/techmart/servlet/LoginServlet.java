@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import lk.dexter.techmart.entity.User;
 import lk.dexter.techmart.service.CartServiceRemote;
 import lk.dexter.techmart.service.UserServiceRemote;
-
+import javax.naming.InitialContext;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -19,9 +19,6 @@ public class LoginServlet extends HttpServlet {
 
     @EJB
     private UserServiceRemote userService;
-
-    @EJB
-    private CartServiceRemote cartService;
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -37,12 +34,18 @@ public class LoginServlet extends HttpServlet {
             User loggedUser = userService.loginUser(email, password);
 
             if (loggedUser != null) {
-
                 HttpSession session = request.getSession(true);
                 session.setAttribute("LOGGED_IN_USER", loggedUser);
 
+                CartServiceRemote cartService = (CartServiceRemote) session.getAttribute("USER_CART_SERVICE");
+
+                if (cartService == null) {
+                    InitialContext ctx = new InitialContext();
+                    cartService = (CartServiceRemote) ctx.lookup("java:global/techmart-ear/lk.dexter.techmart-techmart-ejb-1.0/CartService!lk.dexter.techmart.service.CartServiceRemote");
+                    session.setAttribute("USER_CART_SERVICE", cartService);
+                }
+
                 cartService.initializeCartForUser(loggedUser);
-                session.setAttribute("CartService", cartService);
 
                 response.sendRedirect("home.html");
             } else {

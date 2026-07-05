@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechMart | Checkout</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container my-5" style="max-width: 600px;">
+    <div class="card shadow-sm border-0 p-4">
+        <h2 class="fw-bold text-center text-primary mb-4">Complete Your Order</h2>
+        <hr>
+
+        <div id="order-summary-container">
+            <h5 class="fw-bold mb-3">Order Summary</h5>
+            <ul class="list-group mb-3" id="checkout-items-list">
+                <li class="list-group-item text-center text-muted" id="loading-text">Loading order details...</li>
+            </ul>
+            <div class="d-flex justify-content-between fw-bold fs-5 p-2 bg-white rounded border">
+                <span>Total Amount:</span>
+                <span class="text-success" id="checkout-total">LKR 0.00</span>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <button class="btn btn-success btn-lg" id="place-order-btn" onclick="submitOrder()">Confirm & Place Order</button>
+            <a href="home.html" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pid = urlParams.get('pid');
+    const wid = urlParams.get('wid');
+    const qty = urlParams.get('qty');
+
+    let calculatedTotal = 0;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        let itemsList = document.getElementById('checkout-items-list');
+
+        if (pid && wid && qty) {
+            fetch(`get-product-details?pid=${pid}`)
+                .then(res => res.json())
+                .then(product => {
+                    if (product.productId) {
+                        calculatedTotal = product.price * parseInt(qty);
+
+                        itemsList.innerHTML = `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="my-0 fw-bold text-dark">${product.productName}</h6>
+                                    <small class="text-muted">Quantity: ${qty}</small>
+                                </div>
+                                <span class="fw-bold text-secondary">LKR ${(product.price * qty).toLocaleString()}</span>
+                            </li>`;
+
+                        document.getElementById('checkout-total').innerText = `LKR ${calculatedTotal.toLocaleString()}`;
+                    } else {
+                        itemsList.innerHTML = `<li class="list-group-item text-danger text-center">Product data not found!</li>`;
+                    }
+                })
+                .catch(err => {
+                    itemsList.innerHTML = `<li class="list-group-item text-danger text-center">Error loading product details.</li>`;
+                });
+        } else {
+
+            fetch('get-cart-details')
+                .then(res => res.json())
+                .then(cartData => {
+                    if(cartData && cartData.items && cartData.items.length > 0) {
+                        calculatedTotal = cartData.total;
+                        itemsList.innerHTML = "";
+
+                        cartData.items.forEach(item => {
+                            itemsList.innerHTML += `
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="my-0 fw-bold">${item.productName}</h6>
+                                        <small class="text-muted">Quantity: ${item.qty}</small>
+                                    </div>
+                                    <span class="text-muted">LKR ${item.subTotal.toLocaleString()}</span>
+                                </li>`;
+                        });
+                        document.getElementById('checkout-total').innerText = `LKR ${calculatedTotal.toLocaleString()}`;
+                    } else {
+                        itemsList.innerHTML = `<li class="list-group-item text-warning text-center">Your cart is empty!</li>`;
+                    }
+                })
+                .catch(err => {
+                    itemsList.innerHTML = `<li class="list-group-item text-danger text-center">Error loading cart items.</li>`;
+                });
+        }
+    });
+
+    function submitOrder() {
+        document.getElementById('place-order-btn').disabled = true;
+
+        let endpoint = "";
+        if (pid && wid && qty) {
+            endpoint = `place-order?pid=${pid}&wid=${wid}&qty=${qty}&total=${calculatedTotal}`;
+        } else {
+            endpoint = `place-order?type=cart&total=${calculatedTotal}`;
+        }
+
+        fetch(endpoint, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("🎉 Order placed successfully!");
+                    window.location.href = "profile.html";
+                } else {
+                    alert("❌ Order failed! Stock status issue or invalid session.");
+                    document.getElementById('place-order-btn').disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("An error occurred while placing the order.");
+                document.getElementById('place-order-btn').disabled = false;
+            });
+    }
+    function submitOrder() {
+        document.getElementById('place-order-btn').disabled = true;
+
+        let endpoint = "";
+        if (pid && wid && qty) {
+            endpoint = `place-order?pid=${pid}&wid=${wid}&qty=${qty}&total=${calculatedTotal}`;
+        } else {
+            endpoint = `place-order?type=cart&total=${calculatedTotal}`;
+        }
+
+        fetch(endpoint, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("🎉 Order placed successfully! Redirecting to your profile...");
+
+                    setTimeout(function() {
+                        window.location.href = "profile.html";
+                    }, 1000);
+
+                } else {
+                    alert("❌ Order failed! Stock status issue or invalid session.");
+                    document.getElementById('place-order-btn').disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("An error occurred while placing the order.");
+                document.getElementById('place-order-btn').disabled = false;
+            });
+    }
+</script>
+</body>
+</html>
