@@ -19,8 +19,12 @@ public class InventoryManager implements InventoryManagerRemote {
     @PersistenceContext(unitName = "TechMart_Db_PU")
     private EntityManager em;
 
-    // Key format: "productId:warehouseId"
     private final Map<String, Integer> stockCache = new ConcurrentHashMap<>();
+
+    // Circuit Breaker Variables
+    private int failureCount = 0;
+    private static final int THRESHOLD = 3;
+    private boolean isAvailable = true;
 
     @PostConstruct
     public void init() {
@@ -36,21 +40,44 @@ public class InventoryManager implements InventoryManagerRemote {
     @Override
     @Lock(LockType.WRITE)
     public boolean checkAndReduceStock(Integer productId, Integer warehouseId, int quantity) {
-        String key = getCacheKey(productId, warehouseId);
-        int currentStock = stockCache.getOrDefault(key, 0);
-
-        if (currentStock >= quantity) {
-            Inventory inv = em.createQuery("SELECT i FROM Inventory i WHERE i.product.productId = :pId AND i.warehouse.warehouse_id = :wId", Inventory.class)
-                    .setParameter("pId", productId)
-                    .setParameter("wId", warehouseId)
-                    .getSingleResult();
-
-            inv.setQuantity(currentStock - quantity);
-            em.merge(inv);
-            stockCache.put(key, currentStock - quantity);
-            return true;
+        // 1. Circuit Breaker Check
+        if (!isAvailable) {
+            System.err.println("Circuit is OPEN. Inventory service unavailable.");
+            return false;
         }
-        return false;
+
+        try {
+            long startTime = System.currentTimeMillis(); // Performance Start
+
+            String key = getCacheKey(productId, warehouseId);
+            int currentStock = stockCache.getOrDefault(key, 0);
+
+            if (currentStock >= quantity) {
+                Inventory inv = em.createQuery("SELECT i FROM Inventory i WHERE i.product.productId = :pId AND i.warehouse.warehouse_id = :wId", Inventory.class)
+                        .setParameter("pId", productId)
+                        .setParameter("wId", warehouseId)
+                        .getSingleResult();
+
+                inv.setQuantity(currentStock - quantity);
+                em.merge(inv);
+                stockCache.put(key, currentStock - quantity);
+
+                failureCount = 0; // Reset failures on success
+
+                long duration = System.currentTimeMillis() - startTime; // Performance End
+                System.out.println("Performance: checkAndReduceStock took " + duration + "ms");
+
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            failureCount++;
+            if (failureCount >= THRESHOLD) {
+                isAvailable = false; // Trip the circuit
+            }
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override
@@ -75,16 +102,30 @@ public class InventoryManager implements InventoryManagerRemote {
     @Override
     @Lock(LockType.WRITE)
     public void addInventory(Integer productId, int quantity, Integer warehouseId) {
-        Product product = em.find(Product.class, productId);
-        Warehouse warehouse = em.find(Warehouse.class, warehouseId);
+        List<Inventory> existingInventories = em.createQuery(
+                        "SELECT i FROM Inventory i WHERE i.product.productId = :pId AND i.warehouse.warehouse_id = :wId", Inventory.class)
+                .setParameter("pId", productId)
+                .setParameter("wId", warehouseId)
+                .getResultList();
 
-        if (product != null && warehouse != null) {
-            Inventory inv = new Inventory();
-            inv.setProduct(product);
-            inv.setWarehouse(warehouse);
-            inv.setQuantity(quantity);
-            em.persist(inv);
-            stockCache.put(getCacheKey(productId, warehouseId), quantity);
+        if (!existingInventories.isEmpty()) {
+            Inventory inv = existingInventories.get(0);
+            int newTotal = inv.getQuantity() + quantity;
+            inv.setQuantity(newTotal);
+            em.merge(inv);
+            stockCache.put(getCacheKey(productId, warehouseId), newTotal);
+        } else {
+            Product product = em.find(Product.class, productId);
+            Warehouse warehouse = em.find(Warehouse.class, warehouseId);
+
+            if (product != null && warehouse != null) {
+                Inventory inv = new Inventory();
+                inv.setProduct(product);
+                inv.setWarehouse(warehouse);
+                inv.setQuantity(quantity);
+                em.persist(inv);
+                stockCache.put(getCacheKey(productId, warehouseId), quantity);
+            }
         }
     }
 

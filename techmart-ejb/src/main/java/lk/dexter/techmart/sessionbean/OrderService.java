@@ -8,6 +8,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lk.dexter.techmart.entity.*;
 import lk.dexter.techmart.service.InventoryManagerRemote;
+import lk.dexter.techmart.service.NotificationServiceRemote;
 import lk.dexter.techmart.service.OrderServiceRemote;
 
 import java.util.*;
@@ -21,6 +22,9 @@ public class OrderService implements OrderServiceRemote {
 
     @EJB
     private InventoryManagerRemote inventoryManager;
+
+    @EJB(beanName = "NotificationService")
+    private NotificationServiceRemote notificationService;
 
     // 1. Single product order implementation
     @Override
@@ -42,6 +46,9 @@ public class OrderService implements OrderServiceRemote {
                 item.setQty(qty);
                 item.setSubtotal(totalAmount);
                 em.persist(item);
+                //notificationService.sendNotificationToQueue("ADMIN_USER_ID", "New bulk order placed! ID: " + order.getOrderId(), 4);
+//                String userId = user.getId();
+//                notificationService.sendNotificationToQueue(userId, user.getFname() + "places a order of LKR" + totalAmount + "Order Id :" + order.getOrderId(), 4);
                 return new AsyncResult<>(order);
             } else {
                 order.setStatus(0);
@@ -59,7 +66,9 @@ public class OrderService implements OrderServiceRemote {
     @Asynchronous
     public Future<Orders> placeOrderAsynchronously(User user, Map<Inventory, Integer> cartItems, double totalAmount) {
         try {
+            String userId = user.getId();
             Orders order = createBaseOrder(user, totalAmount);
+
             for (Map.Entry<Inventory, Integer> entry : cartItems.entrySet()) {
                 Inventory inv = entry.getKey();
                 Integer qty = entry.getValue();
@@ -70,13 +79,16 @@ public class OrderService implements OrderServiceRemote {
                     item.setInventory(inv);
                     item.setQty(qty);
                     item.setSubtotal(inv.getProduct().getPrice() * qty);
+                    //notificationService.sendNotificationToQueue(userId, user.getFname() + "places a order of LKR" + totalAmount + "Order Id :" + order.getOrderId(), 4);
                     em.persist(item);
                 } else {
                     order.setStatus(0);
+                    //notificationService.sendNotificationToQueue(userId, user.getFname() + "places a order of LKR" + totalAmount + "Order Id :" + order.getOrderId(), 4);
                     em.merge(order);
                     return new AsyncResult<>(order);
                 }
             }
+
             return new AsyncResult<>(order);
         } catch (Exception e) {
             e.printStackTrace();
@@ -114,15 +126,45 @@ public class OrderService implements OrderServiceRemote {
 
     @Override
     public List<Orders> getAllOrders() {
-        return em.createQuery("SELECT o FROM Orders o ORDER BY o.createdAt DESC", Orders.class).getResultList();
+
+        long startTime = System.currentTimeMillis(); // Monitoring
+
+        List<Orders> orders =  em.createQuery("SELECT o FROM Orders o ORDER BY o.createdAt DESC", Orders.class).getResultList();
+
+        long duration = System.currentTimeMillis() - startTime; // Monitoring
+        System.out.println("Performance Log: getAllOrders execution time: " + duration + "ms");
+
+        return orders;
     }
 
     @Override
     public boolean updateOrderStatus(Integer orderId, int newStatus) {
         Orders order = em.find(Orders.class, orderId);
+
         if (order != null) {
+            if (newStatus == 5 && order.getStatus() != 5) {
+                List<OrderItems> items = em.createQuery(
+                                "SELECT oi FROM OrderItems oi WHERE oi.order.orderId = :orderId", OrderItems.class)
+                        .setParameter("orderId", orderId)
+                        .getResultList();
+
+                for (OrderItems item : items) {
+                    if (item.getInventory() != null && item.getInventory().getProduct() != null) {
+                        Integer pId = item.getInventory().getProduct().getProductId();
+                        Integer wId = item.getInventory().getWarehouse().getWarehouse_id();
+                        int qty = item.getQty();
+
+                        inventoryManager.addInventory(pId, qty, wId);
+                    }
+                }
+            }
+
             order.setStatus(newStatus);
             em.merge(order);
+
+            String customerId = order.getUser().getId();
+            notificationService.sendNotificationToQueue(customerId, "Your order #" + orderId + " status updated to " + newStatus, 1);
+
             return true;
         }
         return false;
@@ -178,6 +220,26 @@ public class OrderService implements OrderServiceRemote {
         stats.put("bestWarehouse", bestWarehouse.isEmpty() ? "N/A" : bestWarehouse.get(0)[0]);
 
         return stats;
+    }
+
+    @Override
+    public List<Map<String, Object>> getOrderDetailsWithWarehouse(Integer orderId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        List<OrderItems> items = em.createQuery(
+                        "SELECT oi FROM OrderItems oi JOIN FETCH oi.inventory i JOIN FETCH i.warehouse w WHERE oi.order.orderId = :orderId",
+                        OrderItems.class)
+                .setParameter("orderId", orderId)
+                .getResultList();
+
+        for (OrderItems item : items) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("productName", item.getInventory().getProduct().getProductName());
+            map.put("qty", item.getQty());
+            map.put("warehouseName", item.getInventory().getWarehouse().getName());
+            list.add(map);
+        }
+        return list;
     }
 
 }

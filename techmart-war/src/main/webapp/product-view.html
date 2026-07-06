@@ -7,6 +7,8 @@
 </head>
 <body class="bg-light">
 
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+
 <div class="container my-5">
     <div id="product-details" class="row">
         <div class="text-center">Loading product details...</div>
@@ -78,5 +80,6 @@
         window.location.href = `checkout.html?pid=${pid}&wid=${wid}&qty=1`;
     }
 </script>
+<script src="js/notifications.js"></script>
 </body>
 </html>

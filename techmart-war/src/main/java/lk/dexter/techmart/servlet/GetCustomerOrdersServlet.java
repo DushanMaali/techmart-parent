@@ -1,5 +1,6 @@
 package lk.dexter.techmart.servlet;
 
+import jakarta.ejb.EJB;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -21,14 +22,8 @@ import java.util.Map;
 @WebServlet("/customer-orders")
 public class GetCustomerOrdersServlet extends HttpServlet {
 
+    @EJB
     private OrderServiceRemote orderService;
-
-    private void lookupEJB() throws Exception {
-        if (orderService == null) {
-            InitialContext ctx = new InitialContext();
-            orderService = (OrderServiceRemote) ctx.lookup("java:global/techmart-ear/lk.dexter.techmart-techmart-ejb-1.0/OrderService!lk.dexter.techmart.service.OrderServiceRemote");
-        }
-    }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -49,7 +44,6 @@ public class GetCustomerOrdersServlet extends HttpServlet {
         User user = (User) session.getAttribute("LOGGED_IN_USER");
 
         try {
-            lookupEJB();
             List<Orders> ordersList = orderService.getOrdersByUser(user.getId());
 
             List<Map<String, Object>> serializedOrders = new ArrayList<>();
@@ -88,7 +82,6 @@ public class GetCustomerOrdersServlet extends HttpServlet {
         }
 
         try {
-            lookupEJB();
             int orderId = Integer.parseInt(req.getParameter("orderId"));
             Orders order = orderService.getOrderById(orderId);
 

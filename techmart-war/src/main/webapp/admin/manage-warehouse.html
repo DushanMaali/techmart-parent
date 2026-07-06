@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TechMart | Manage Warehouses</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { height: 100vh; background: #2c3e50; color: white; width: 260px; position: fixed; top: 0; left: 0; padding-top: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar h4 { color: #ecf0f1; margin-bottom: 30px; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; display: block; padding: 15px 25px; font-size: 1.1rem; transition: 0.3s; }
+        .sidebar a:hover { background: #34495e; color: white; border-left: 5px solid #3498db; }
+        .main-content { margin-left: 260px; padding: 40px; }
+    </style>
+</head>
+<body>
+
+<div id="admin-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+
+<div class="sidebar">
+    <h4 class="text-center"><i class="bi bi-shop"></i> TechMart Admin</h4>
+    <a href="admin-dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a href="manage-products.html"><i class="bi bi-box-seam"></i> Products</a>
+    <a href="manage-inventory.html"><i class="bi bi-stack"></i> Inventory</a>
+    <a href="manage-orders.html"><i class="bi bi-cart-check"></i> Orders</a>
+    <a href="manage-warehouse.html"><i class="bi bi-house-door"></i> Warehouses</a>
+    <a href="manage-users.html"><i class="bi bi-people"></i> Users</a>
+</div>
+
+<div class="main-content">
+    <h3>Warehouse Management</h3>
+    <form action="../admin/warehouse-action?action=add" method="POST" class="row g-3 mb-4">
+        <div class="col-md-4"><input type="text" name="name" class="form-control" placeholder="Warehouse Name" required></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Add Warehouse</button></div>
+    </form>
+
+    <table class="table table-bordered bg-white">
+        <thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead>
+        <tbody id="warehouseTable"></tbody>
+    </table>
+</div>
+
+<script>
+    fetch('../admin/warehouse-list').then(res => res.json()).then(data => {
+        let tbody = document.getElementById('warehouseTable');
+        data.forEach(w => {
+            tbody.innerHTML += `<tr>
+                <td>${w.warehouse_id}</td>
+                <td>${w.name}</td>
+                <td><button class="btn btn-sm btn-info" onclick="editWarehouse(${w.warehouse_id}, '${w.name}')">Edit</button></td>
+            </tr>`;
+        });
+    });
+
+    function editWarehouse(id, name) {
+        let newName = prompt("Edit Warehouse Name:", name);
+        if(newName) {
+            fetch(`../admin/warehouse-action?action=update&id=${id}&name=${newName}`, {
+                method: 'POST'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    }
+</script>
+<script src="../js/admin-notifications.js"></script>
+</body>
+</html>

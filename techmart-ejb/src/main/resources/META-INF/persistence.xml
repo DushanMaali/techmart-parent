@@ -19,6 +19,8 @@
         <class>lk.dexter.techmart.entity.Orders</class>
         <class>lk.dexter.techmart.entity.Product</class>
         <class>lk.dexter.techmart.entity.User</class>
+        <class>lk.dexter.techmart.entity.NotificationType</class>
+        <class>lk.dexter.techmart.entity.Notification</class>
 
         <properties>
 

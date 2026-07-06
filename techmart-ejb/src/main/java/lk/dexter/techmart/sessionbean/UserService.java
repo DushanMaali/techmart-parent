@@ -7,6 +7,7 @@ import lk.dexter.techmart.entity.User;
 import lk.dexter.techmart.service.UserServiceRemote;
 
 import java.util.Date;
+import java.util.List;
 
 @Stateless(name = "UserService")
 public class UserService implements UserServiceRemote {
@@ -52,6 +53,11 @@ public class UserService implements UserServiceRemote {
                 .getSingleResult();
         int nextNumber = count.intValue() + 1;
         return String.format("U%04d", nextNumber);
+    }
+
+    @Override
+    public List<User> getAllUsers() {
+        return em.createQuery("SELECT u FROM User u", User.class).getResultList();
     }
 
 }

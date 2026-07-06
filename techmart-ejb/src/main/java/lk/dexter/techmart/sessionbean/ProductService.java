@@ -100,4 +100,9 @@ public class ProductService implements ProductServiceRemote {
         return groupedProducts;
     }
 
+    @Override
+    public void updateProduct(Product product) {
+        em.merge(product);
+    }
+
 }

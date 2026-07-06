@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lk.dexter.techmart.entity.User;
 import lk.dexter.techmart.entity.Orders;
+import lk.dexter.techmart.service.NotificationServiceRemote;
 import lk.dexter.techmart.service.OrderServiceRemote;
 import lk.dexter.techmart.service.CartServiceRemote;
 import lk.dexter.techmart.service.CheckoutServiceRemote;
@@ -24,6 +25,9 @@ public class PlaceOrderServlet extends HttpServlet {
 
     @EJB
     private CheckoutServiceRemote checkoutService;
+
+    @EJB(beanName = "NotificationService")
+    private NotificationServiceRemote notificationService;
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -60,6 +64,14 @@ public class PlaceOrderServlet extends HttpServlet {
             }
 
             if (orderFuture != null && orderFuture.get() != null && orderFuture.get().getStatus() == 1) {
+
+                Orders createdOrder = orderFuture.get();
+                notificationService.sendNotificationToQueue(
+                        user.getId(),
+                        user.getFname() + " placed an order of LKR " + totalAmount + ". Order Id: " + createdOrder.getOrderId(),
+                        4
+                );
+
                 if ("cart".equals(type)) {
                     CartServiceRemote cartService = (CartServiceRemote) session.getAttribute("USER_CART_SERVICE");
                     if (cartService != null) cartService.clearCart();

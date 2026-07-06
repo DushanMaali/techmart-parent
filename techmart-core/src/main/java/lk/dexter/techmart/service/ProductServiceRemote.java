@@ -21,5 +21,6 @@ public interface ProductServiceRemote {
     void updateProductStatus(Integer productId, Integer status);
     Map<Warehouse, Integer> getAvailableStockByProduct(Integer productId);
     Map<String, List<Product>> getProductsGroupedByCategory();
+    void updateProduct(Product product);
 
 }

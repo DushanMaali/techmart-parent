@@ -9,6 +9,8 @@
 </head>
 <body class="bg-light">
 
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+
 <div class="container my-5">
     <div class="card shadow-sm border-0 p-4">
         <h2 class="fw-bold text-primary mb-4">🛒 Shopping Cart</h2>
@@ -46,7 +48,6 @@
         </div>
     </div>
 </div>
-
 <script>
     let isLoggedIn = false;
 
@@ -187,5 +188,6 @@
         document.getElementById('checkout-btn').onclick = null;
     }
 </script>
+<script src="js/notifications.js"></script>
 </body>
 </html>

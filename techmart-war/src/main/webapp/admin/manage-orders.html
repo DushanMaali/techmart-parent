@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TechMart | Order Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .sidebar { height: 100vh; background: #2c3e50; color: white; width: 260px; position: fixed; top: 0; left: 0; padding-top: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar h4 { color: #ecf0f1; margin-bottom: 30px; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; display: block; padding: 15px 25px; font-size: 1.1rem; transition: 0.3s; }
+        .sidebar a:hover { background: #34495e; color: white; border-left: 5px solid #3498db; }
+        .main-content { margin-left: 260px; padding: 40px; }
+        .order-card { border-left: 5px solid #3498db; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="admin-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+
+<div class="sidebar">
+    <h4 class="text-center"><i class="bi bi-shop"></i> TechMart Admin</h4>
+    <a href="admin-dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    <a href="manage-products.html"><i class="bi bi-box-seam"></i> Products</a>
+    <a href="manage-inventory.html"><i class="bi bi-stack"></i> Inventory</a>
+    <a href="manage-orders.html"><i class="bi bi-cart-check"></i> Orders</a>
+    <a href="manage-warehouse.html"><i class="bi bi-house-door"></i> Warehouses</a>
+    <a href="manage-users.html"><i class="bi bi-people"></i> Users</a>
+</div>
+
+<div class="main-content">
+    <h3>Order Management</h3>
+    <div class="row" id="order-container">
+        <div class="col-md-2" id="status-1"><h5>Notified</h5></div>
+        <div class="col-md-2" id="status-2"><h5>Confirmed</h5></div>
+        <div class="col-md-2" id="status-3"><h5>Packed</h5></div>
+        <div class="col-md-2" id="status-4"><h5>Shipped</h5></div>
+        <div class="col-md-2" id="status-5"><h5>Cancelled</h5></div>
+    </div>
+</div>
+
+<script>
+    fetch("../all-orders")
+        .then(response => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+        })
+        .then(orders => {
+            orders.forEach(order => {
+                const container = document.getElementById("status-" + order.status);
+                if (!container) return;
+
+                let itemsHtml = "";
+                order.items.forEach(item => {
+                    itemsHtml += `
+                        <div class="small border-bottom mb-1">
+                            ${item.productName} (x${item.qty})<br>
+                            <small class="text-primary">Warehouse: ${item.warehouseName}</small>
+                        </div>
+                    `;
+                });
+
+                let buttonsHtml = "";
+
+                if (order.status === 1) {
+                    buttonsHtml = `
+        <button class="btn btn-sm btn-success" onclick="updateStatus(${order.orderId}, 2, this)">Confirm</button>
+        <button class="btn btn-sm btn-danger" onclick="updateStatus(${order.orderId}, 5, this)">Cancel</button>`;
+                } else if (order.status === 2) {
+                    buttonsHtml = `
+        <button class="btn btn-sm btn-primary" onclick="updateStatus(${order.orderId}, 3, this)">Pack</button>
+        <button class="btn btn-sm btn-danger" onclick="updateStatus(${order.orderId}, 5, this)">Cancel</button>`;
+                } else if (order.status === 3) {
+                    buttonsHtml = `
+        <button class="btn btn-sm btn-info" onclick="updateStatus(${order.orderId}, 4, this)">Ship</button>
+        <button class="btn btn-sm btn-danger" onclick="updateStatus(${order.orderId}, 5, this)">Cancel</button>`;
+                }
+
+                container.innerHTML += `
+                    <div class="card order-card p-2 shadow-sm mb-2">
+                        <strong>Order #${order.orderId}</strong>
+                        ${itemsHtml}
+                        <div class="text-end mt-2">${buttonsHtml}</div>
+                        <div class="text-end fw-bold">LKR ${order.totalAmount}</div>
+                    </div>
+                `;
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to load orders.");
+        });
+
+    function updateStatus(orderId, status, buttonElement) {
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = "Processing...";
+
+        fetch('../update-order-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `orderId=${orderId}&status=${status}`
+        }).then(res => {
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert("Error updating status!");
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = "Retry";
+            }
+        }).catch(err => {
+            console.error(err);
+            buttonElement.disabled = false;
+            alert("Connection error!");
+        });
+    }
+</script>
+<script src="../js/admin-notifications.js"></script>
+</body>
+</html>
